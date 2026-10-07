@@ -1,0 +1,174 @@
+/* ==========================================================================
+   RESTAURANT MANAGEMENT SYSTEM
+   Receipt Stylesheet: receipt.css
+   Thermal Paper Style POS Receipt & Print Rules
+   ========================================================================== */
+
+.receipt-wrapper {
+  background: #fff;
+  padding: 1.5rem;
+  max-width: 380px;
+  margin: 0 auto;
+  font-family: 'Courier New', Courier, monospace;
+  color: #111;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.receipt-header {
+  text-align: center;
+  border-bottom: 1px dashed #475569;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.receipt-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.receipt-tagline {
+  font-size: 0.75rem;
+  color: #475569;
+  margin-top: 2px;
+}
+
+.receipt-meta {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+.receipt-meta-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.receipt-divider {
+  border-top: 1px dashed #475569;
+  margin: 0.75rem 0;
+}
+
+.receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.receipt-table th {
+  text-align: left;
+  border-bottom: 1px dashed #475569;
+  padding: 4px 0;
+  font-weight: 700;
+}
+
+.receipt-table td {
+  padding: 4px 0;
+  vertical-align: top;
+}
+
+.receipt-table .col-item {
+  width: 50%;
+}
+
+.receipt-table .col-qty {
+  width: 20%;
+  text-align: center;
+}
+
+.receipt-table .col-subtotal {
+  width: 30%;
+  text-align: right;
+}
+
+.receipt-totals {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.receipt-totals-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.receipt-totals-row.grand-total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-top: 1px dashed #475569;
+  border-bottom: 1px dashed #475569;
+  padding: 4px 0;
+  margin: 6px 0;
+}
+
+.receipt-footer {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #475569;
+  margin-top: 1rem;
+  border-top: 1px dashed #475569;
+  padding-top: 0.75rem;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   PRINT MEDIA RULES (For realistic printing / save as PDF)
+   ========================================================================== */
+@media print {
+  /* Hide all non-receipt elements on the page */
+  body * {
+    visibility: hidden;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: transparent !important;
+    padding: 0;
+  }
+
+  .modal-content {
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .modal-header,
+  .modal-footer,
+  .navbar,
+  .app-footer,
+  .toast-container {
+    display: none !important;
+  }
+
+  /* Make receipt container visible and centered */
+  #receiptModal,
+  #receiptModal .modal-body,
+  #receiptModal .receipt-wrapper,
+  #receiptModal .receipt-wrapper * {
+    visibility: visible !important;
+  }
+
+  #receiptModal .modal-body {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .receipt-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 320px;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 10px;
+  }
+}
+

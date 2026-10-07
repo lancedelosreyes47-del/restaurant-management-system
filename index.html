@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Savory Bites - Restaurant Management</title>
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Printable Thermal Receipt Stylesheet -->
+  <link rel="stylesheet" href="css/receipt.css">
+</head>
+<body>
+
+  <!-- ========================================================================
+       TOP NAVIGATION BAR (Dynamic based on logged in role)
+       ======================================================================== -->
+  <nav class="navbar" id="mainNavbar" style="display: none;">
+    <a href="javascript:void(0)" class="nav-brand" onclick="showView(currentUser.role === 'admin' ? 'dashboardView' : (currentUser.role === 'staff' ? 'posView' : 'customerPortalView'))">
+      <span>🍽️</span> Savory Bites <span class="brand-badge">RMS</span>
+    </a>
+
+    <div class="nav-links">
+      <!-- Admin Navigation -->
+      <button type="button" class="nav-admin-only" data-target="dashboardView" onclick="showView('dashboardView')">
+        📊 Dashboard
+      </button>
+      <button type="button" class="nav-admin-only" data-target="adminMenuView" onclick="showView('adminMenuView')">
+        📋 Menu
+      </button>
+
+      <!-- Staff & Admin Shared Navigation -->
+      <button type="button" class="nav-staff-access" data-target="posView" onclick="showView('posView')">
+        🛒 Cashier POS
+      </button>
+      <button type="button" class="nav-staff-access" data-target="ordersView" onclick="showView('ordersView')">
+        📦 Orders
+      </button>
+
+      <!-- Admin Sales Navigation -->
+      <button type="button" class="nav-admin-only" data-target="salesView" onclick="showView('salesView')">
+        💰 Sales
+      </button>
+
+      <!-- Customer Navigation -->
+      <button type="button" class="nav-customer-only" data-target="customerPortalView" onclick="showView('customerPortalView')">
+        📖 Food Menu & Cart
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <span id="supabaseStatusBadge" class="badge" onclick="openSupabaseSetupModal()" style="cursor: pointer;" title="Supabase Database Status. Click for setup.">
+        ⚡ Checking Supabase...
+      </span>
+      <div class="nav-user" id="navUserDisplay">
+        <span id="navRoleBadge" class="role-badge"></span>
+        <span id="navUserName" style="font-weight: 600;"></span>
+        <button type="button" class="btn btn-sm btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========================================================================
+       MAIN CONTENT CONTAINER
+       ======================================================================== -->
+  <main class="container">
+
+    <!-- ======================================================================
+         VIEW 1: LOGIN SYSTEM (Admin, Staff, and Customer direct access)
+         ====================================================================== -->
+    <section id="loginView" class="view-section active">
+      <div class="login-wrapper">
+        <div class="login-card">
+          <div class="login-logo">🍔</div>
+          <h2 class="login-title">Savory Bites </h2>
+          <p class="login-subtitle">Restaurant Management (In-Memory)</p>
+
+          <!-- Role Selector Tabs -->
+          <div class="role-tabs">
+            <button type="button" id="tabRole-admin" class="role-tab-btn active" onclick="switchLoginRoleTab('admin')">
+              Admin
+            </button>
+            <button type="button" id="tabRole-staff" class="role-tab-btn" onclick="switchLoginRoleTab('staff')">
+              Cashier / Staff
+            </button>
+            <button type="button" id="tabRole-customer" class="role-tab-btn" onclick="switchLoginRoleTab('customer')">
+              Customer
+            </button>
+          </div>
+
+          <!-- Login Form -->
+          <form id="loginForm">
+            <div id="loginCredentialsFields">
+              <div class="form-group" style="text-align: left;">
+                <label class="form-label" for="loginUsername">Username</label>
+                <input type="text" id="loginUsername" class="form-control" placeholder="Enter username" value="admin" required>
+              </div>
+
+              <div class="form-group" style="text-align: left;">
+                <label class="form-label" for="loginPassword">Password</label>
+                <div style="position: relative;">
+                  <input type="password" id="loginPassword" class="form-control" placeholder="Enter password" value="admin123" style="padding-right: 40px;" required>
+                  <button type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--text-muted);" title="Toggle password visibility">👁️</button>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginSubmitBtn">
+              <span id="loginBtnText">Login as Admin</span>
+            </button>
+
+            <!-- Quick Demo Login Buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+              <button type="button" class="btn btn-sm btn-secondary" style="flex: 1;" onclick="quickLogin('admin')">⚡ Quick Admin</button>
+              <button type="button" class="btn btn-sm btn-secondary" style="flex: 1;" onclick="quickLogin('staff')">⚡ Quick Staff</button>
+            </div>
+          </form>
+
+          <!-- Predefined Credentials Box for School Presentation -->
+          <div class="demo-credentials-box" id="demoCredentialsHelp">
+            <strong>Admin Demo Credentials:</strong>
+            Username: <code>admin</code> | Password: <code>admin123</code>
+          </div>
+
+          <!-- Supabase Connection Indicator on Login Screen -->
+          <div style="margin-top: 1rem; font-size: 0.8rem;">
+            <span id="loginSupabaseBadge" class="badge" onclick="openSupabaseSetupModal()" style="cursor: pointer;" title="Click for Supabase Cloud Database setup">
+              ⚡ Checking Supabase...
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VIEW 2: ADMIN DASHBOARD
+         ====================================================================== -->
+    <section id="dashboardView" class="view-section">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Restaurant Management System</h1>
+          <p class="page-subtitle">Welcome to the central management overview and temporary in-memory metrics.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-primary" onclick="showView('posView')">
+            🛒 Open Point of Sale (POS)
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric Cards Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon orange">📋</div>
+          <div class="stat-info">
+            <h4>Total Menu Items</h4>
+            <div class="stat-value" id="dashTotalMenu">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-info">
+            <h4>Available Items</h4>
+            <div class="stat-value" id="dashAvailableItems">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon yellow">⏳</div>
+          <div class="stat-info">
+            <h4>Pending Orders</h4>
+            <div class="stat-value" id="dashPendingOrders">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon blue">📦</div>
+          <div class="stat-info">
+            <h4>Completed Orders</h4>
+            <div class="stat-value" id="dashCompletedOrders">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon purple">💰</div>
+          <div class="stat-info">
+            <h4>Today's Temporary Sales</h4>
+            <div class="stat-value" id="dashTotalSales">₱0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Highlight Card: Most Ordered Food -->
+      <div class="card" style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border-color: #fed7aa;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+          <div style="font-size: 2.2rem;">🏆</div>
+          <div>
+            <h4 style="font-size: 0.85rem; text-transform: uppercase; color: #9a3412; letter-spacing: 0.5px;">
+              Most Ordered Food Item
+            </h4>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #7c2d12;" id="dashMostOrdered">
+              Loading...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Orders on Dashboard -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Recent In-Memory Orders</h3>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="showView('ordersView')">
+            View All Orders →
+          </button>
+        </div>
+        <div class="table-responsive" id="dashRecentOrdersList">
+          <!-- Populated by sales.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VIEW 3: ADMIN MENU MANAGEMENT (CRUD + Availability)
+         ====================================================================== -->
+    <section id="adminMenuView" class="view-section">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Menu Management</h1>
+          <p class="page-subtitle">Add, edit, delete, or toggle availability of food items stored in memory.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-primary" onclick="openAddMenuModal()">
+            ➕ Add Food Item
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <!-- Category & Stock Filters -->
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <div class="menu-filter-bar" id="adminMenuCategoryFilters" style="margin-bottom: 0;">
+              <button type="button" class="filter-btn active" onclick="setAdminCategoryFilter('All', this)">All</button>
+              <button type="button" class="filter-btn" onclick="setAdminCategoryFilter('Main Course', this)">Main Course</button>
+              <button type="button" class="filter-btn" onclick="setAdminCategoryFilter('Fast Food', this)">Fast Food</button>
+              <button type="button" class="filter-btn" onclick="setAdminCategoryFilter('Side Dish', this)">Side Dish</button>
+              <button type="button" class="filter-btn" onclick="setAdminCategoryFilter('Beverage', this)">Beverage</button>
+              <button type="button" class="filter-btn" onclick="setAdminCategoryFilter('Dessert', this)">Dessert</button>
+            </div>
+
+            <div class="menu-filter-bar" id="adminMenuAvailabilityFilters" style="margin-bottom: 0;">
+              <button type="button" class="filter-btn active" onclick="setAdminAvailabilityFilter('all', this)">All Stock</button>
+              <button type="button" class="filter-btn" onclick="setAdminAvailabilityFilter('available', this)">✅ In Stock</button>
+              <button type="button" class="filter-btn" onclick="setAdminAvailabilityFilter('unavailable', this)">❌ Out of Stock</button>
+            </div>
+          </div>
+
+          <!-- Search Input -->
+          <div class="search-box" style="margin-bottom: 0;">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="adminMenuSearchInput" class="form-control" placeholder="Search by name or ID...">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item ID</th>
+                <th>Food Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Availability</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminMenuTableBody">
+              <!-- Populated by menu.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VIEW 4: CASHIER POINT OF SALE (POS)
+         ====================================================================== -->
+    <section id="posView" class="view-section">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Point of Sale (POS)</h1>
+          <p class="page-subtitle">Select dishes, build customer orders, accept cash payment, and generate receipts.</p>
+        </div>
+      </div>
+
+      <div class="pos-layout">
+        <!-- Left: Food Catalog -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+            <div class="menu-filter-bar" id="posCategoryFilters" style="margin-bottom: 0;">
+              <button type="button" class="filter-btn active" onclick="setPOSCategoryFilter('All', this, 'posCategoryFilters')">All</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Main Course', this, 'posCategoryFilters')">Main Course</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Fast Food', this, 'posCategoryFilters')">Fast Food</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Side Dish', this, 'posCategoryFilters')">Side Dish</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Beverage', this, 'posCategoryFilters')">Beverage</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Dessert', this, 'posCategoryFilters')">Dessert</button>
+            </div>
+
+            <div class="search-box" style="margin-bottom: 0;">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="posSearchInput" class="form-control" placeholder="Quick search food...">
+            </div>
+          </div>
+
+          <!-- Food Cards Grid -->
+          <div class="food-grid" id="posFoodGrid">
+            <!-- Populated by pos.js -->
+          </div>
+        </div>
+
+        <!-- Right: Current Order / Cart Panel -->
+        <div class="cart-panel">
+          <div class="cart-header">
+            <div>
+              <h3 style="font-size: 1.1rem; color: var(--secondary);">Current Order</h3>
+              <span id="posCartCount" style="font-size: 0.8rem; color: var(--text-muted);">0 items</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="clearCart()">Clear</button>
+          </div>
+
+          <div class="cart-items-container" id="posCartItemsContainer">
+            <!-- Populated by pos.js -->
+          </div>
+
+          <div class="cart-summary">
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span id="posCartSubtotalAmount">Auto calculated</span>
+            </div>
+            <div class="summary-row total-row">
+              <span>Total:</span>
+              <span class="total-amount" id="posCartTotalAmount">₱0.00</span>
+            </div>
+
+            <button type="button" id="btnCheckoutPOS" class="btn btn-success btn-block btn-lg" style="margin-top: 0.75rem;" onclick="openPaymentModal()" disabled>
+              💵 Accept Payment & Checkout
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VIEW 5: ALL ORDERS (Admin & Staff View)
+         ====================================================================== -->
+    <section id="ordersView" class="view-section">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Order Management</h1>
+          <p class="page-subtitle">Track and advance order statuses: Pending → Preparing → Ready → Completed.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-secondary" onclick="exportOrdersToCSV()">
+            📥 Export Orders CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <!-- Status Filter Buttons -->
+          <div class="menu-filter-bar" id="orderStatusFilters" style="margin-bottom: 0;">
+            <button type="button" class="filter-btn active" onclick="setOrderStatusFilter('All', this)">All Orders</button>
+            <button type="button" class="filter-btn" onclick="setOrderStatusFilter('Pending', this)">⏳ Pending</button>
+            <button type="button" class="filter-btn" onclick="setOrderStatusFilter('Preparing', this)">🍳 Preparing</button>
+            <button type="button" class="filter-btn" onclick="setOrderStatusFilter('Ready', this)">🔔 Ready</button>
+            <button type="button" class="filter-btn" onclick="setOrderStatusFilter('Completed', this)">✅ Completed</button>
+            <button type="button" class="filter-btn" onclick="setOrderStatusFilter('Cancelled', this)">❌ Cancelled</button>
+          </div>
+
+          <!-- Search Box -->
+          <div class="search-box" style="margin-bottom: 0;">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="ordersSearchInput" class="form-control" placeholder="Search customer or order #..." oninput="handleOrdersSearch(event)">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Customer / Time</th>
+                <th>Ordered Items</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody">
+              <!-- Populated by orders.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VIEW 6: SALES SUMMARY (Admin View)
+         ====================================================================== -->
+    <section id="salesView" class="view-section">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Sales Summary & Analytics</h1>
+          <p class="page-subtitle">In-memory & cloud sales performance, order counts, and top-selling dishes.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-primary" onclick="printSalesReport()">
+            🖨️ Print Sales Report
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon orange">📊</div>
+          <div class="stat-info">
+            <h4>Total Orders</h4>
+            <div class="stat-value" id="salesTotalOrders">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-info">
+            <h4>Completed Orders</h4>
+            <div class="stat-value" id="salesCompletedOrders">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon red">❌</div>
+          <div class="stat-info">
+            <h4>Cancelled Orders</h4>
+            <div class="stat-value" id="salesCancelledOrders">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon purple">💰</div>
+          <div class="stat-info">
+            <h4>Total Revenue</h4>
+            <div class="stat-value" id="salesTotalRevenue">₱0.00</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon blue">📈</div>
+          <div class="stat-info">
+            <h4>Avg Order Value</h4>
+            <div class="stat-value" id="salesAvgOrderValue">₱0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🏆 Top-Selling Food Ranking</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Food Item</th>
+                <th>Category</th>
+                <th>Units Sold</th>
+                <th>Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody id="salesTopSellersBody">
+              <!-- Populated by sales.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VIEW 7: CUSTOMER PORTAL (Self-Service Kiosk & Live Order Tracker)
+         ====================================================================== -->
+    <section id="customerPortalView" class="view-section">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Self-Service Customer Ordering</h1>
+          <p class="page-subtitle">Browse delicious items, add them to your cart, place an order, and track status.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-secondary" onclick="logout()">
+            Staff / Admin Login
+          </button>
+        </div>
+      </div>
+
+      <!-- Order Tracker Bar for Customers -->
+      <div class="card" style="border-left: 4px solid var(--primary); background: #fffaf0;">
+        <h3 style="font-size: 1.1rem; color: var(--secondary); margin-bottom: 0.5rem;">🔍 Track Your Order Status</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+          Enter your Order Number (e.g. <code>ORD-1004</code>) to check live kitchen progress.
+        </p>
+        <div style="display: flex; gap: 0.5rem; max-width: 450px;">
+          <input type="text" id="customerTrackOrderId" class="form-control" placeholder="e.g. ORD-1004">
+          <button type="button" class="btn btn-primary" onclick="trackCustomerOrder()">Track Status</button>
+        </div>
+        <div id="customerTrackResult" style="margin-top: 1rem;"></div>
+      </div>
+
+      <div class="pos-layout" style="margin-top: 1.5rem;">
+        <!-- Left: Customer Menu Grid -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+            <div class="menu-filter-bar" id="customerCategoryFilters" style="margin-bottom: 0;">
+              <button type="button" class="filter-btn active" onclick="setPOSCategoryFilter('All', this, 'customerCategoryFilters')">All</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Main Course', this, 'customerCategoryFilters')">Main Course</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Fast Food', this, 'customerCategoryFilters')">Fast Food</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Side Dish', this, 'customerCategoryFilters')">Side Dish</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Beverage', this, 'customerCategoryFilters')">Beverage</button>
+              <button type="button" class="filter-btn" onclick="setPOSCategoryFilter('Dessert', this, 'customerCategoryFilters')">Dessert</button>
+            </div>
+
+            <div class="search-box" style="margin-bottom: 0;">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="customerSearchInput" class="form-control" placeholder="Search menu...">
+            </div>
+          </div>
+
+          <div class="food-grid" id="customerFoodGrid">
+            <!-- Populated by pos.js -->
+          </div>
+        </div>
+
+        <!-- Right: Customer Cart -->
+        <div class="cart-panel">
+          <div class="cart-header">
+            <div>
+              <h3 style="font-size: 1.1rem; color: var(--secondary);">My Tray / Cart</h3>
+              <span id="customerCartCount" style="font-size: 0.8rem; color: var(--text-muted);">0 items</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="clearCart()">Clear</button>
+          </div>
+
+          <div class="cart-items-container" id="customerCartItemsContainer">
+            <!-- Populated by pos.js -->
+          </div>
+
+          <div class="cart-summary">
+            <div class="summary-row total-row">
+              <span>Total Price:</span>
+              <span class="total-amount" id="customerCartTotalAmount">₱0.00</span>
+            </div>
+
+            <button type="button" id="btnCustomerPlaceOrder" class="btn btn-primary btn-block btn-lg" style="margin-top: 0.75rem;" onclick="processCustomerOrder()" disabled>
+              🛎️ Place Order
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       MODALS
+       ======================================================================== -->
+
+  <!-- 1. Add / Edit Menu Item Modal -->
+  <div class="modal-backdrop" id="menuModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalMenuTitle">Add Food Item</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('menuModal')">&times;</button>
+      </div>
+      <form id="menuItemForm">
+        <input type="hidden" id="menuItemEditId" value="">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="menuItemId">Item ID *</label>
+              <input type="text" id="menuItemId" class="form-control" placeholder="e.g. M011" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="menuItemCategory">Category *</label>
+              <select id="menuItemCategory" class="form-control" required></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="menuItemName">Food / Item Name *</label>
+            <input type="text" id="menuItemName" class="form-control" placeholder="e.g. Chicken Adobo" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="menuItemPrice">Price (₱) *</label>
+            <input type="number" id="menuItemPrice" class="form-control" placeholder="e.g. 120" step="0.01" min="1" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="menuItemDesc">Description (Optional)</label>
+            <textarea id="menuItemDesc" class="form-control" rows="2" placeholder="Ingredients, taste or serving details..."></textarea>
+          </div>
+
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+            <input type="checkbox" id="menuItemAvailable" style="width: 18px; height: 18px;" checked>
+            <label for="menuItemAvailable" style="font-size: 0.9rem; font-weight: 600; cursor: pointer;">
+              Available for Ordering (In Stock)
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('menuModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Food Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Cashier Payment Modal -->
+  <div class="modal-backdrop" id="paymentModal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3>Process Customer Payment</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('paymentModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="paymentCustomerName">Customer / Table Name</label>
+            <input type="text" id="paymentCustomerName" class="form-control" value="Walk-in Customer">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="paymentOrderType">Order Type</label>
+            <select id="paymentOrderType" class="form-control">
+              <option value="Dine-In">Dine-In</option>
+              <option value="Takeout">Takeout</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="paymentDiscountSelect">Discount Applied</label>
+            <select id="paymentDiscountSelect" class="form-control" onchange="handleDiscountChange()">
+              <option value="none">No Discount (Regular)</option>
+              <option value="senior_pwd">Senior Citizen / PWD (20%)</option>
+              <option value="student">Student (10%)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="paymentMethodSelect">Payment Method</label>
+            <select id="paymentMethodSelect" class="form-control" onchange="handlePaymentMethodChange()">
+              <option value="Cash">💵 Cash</option>
+              <option value="GCash">📱 GCash</option>
+              <option value="Maya">📱 Maya (PayMaya)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- GCash / Maya Reference Field -->
+        <div class="form-group" id="paymentGcashRefGroup" style="display: none;">
+          <label class="form-label" for="paymentGcashRef">E-Wallet Reference Number *</label>
+          <input type="text" id="paymentGcashRef" class="form-control" placeholder="e.g. 100293847561">
+        </div>
+
+        <!-- Total Calculation Box -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); padding: 1rem 1.25rem; border-radius: var(--radius-sm); margin-bottom: 1.2rem;">
+          <div id="paymentSubtotalRow" style="display: none; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+            <span>Gross Subtotal:</span>
+            <span id="paymentSubtotalDisplay">₱0.00</span>
+          </div>
+          <div id="paymentDiscountRow" style="display: none; justify-content: space-between; font-size: 0.9rem; color: var(--success); font-weight: 600; margin-bottom: 0.35rem;">
+            <span>Discount:</span>
+            <span id="paymentDiscountDisplay">-₱0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 0.5rem;">
+            <span style="font-size: 0.95rem; font-weight: 700; color: var(--secondary); text-transform: uppercase;">Total Amount Due:</span>
+            <span style="font-size: 2rem; font-weight: 800; color: var(--primary);" id="paymentTotalDisplay">₱0.00</span>
+          </div>
+        </div>
+
+        <!-- Quick Cash Buttons -->
+        <div style="margin-bottom: 0.75rem;" id="quickCashButtonsContainer">
+          <label class="form-label">Quick Cash Amount</label>
+          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setQuickCash('exact')">Exact Amount</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setQuickCash(100)">₱100</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setQuickCash(200)">₱200</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setQuickCash(500)">₱500</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setQuickCash(1000)">₱1000</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="paymentCustomerCash">Amount Tendered (₱) *</label>
+          <input type="number" id="paymentCustomerCash" class="form-control" style="font-size: 1.35rem; font-weight: 700;" placeholder="Enter cash tendered" step="any" min="0" required>
+        </div>
+
+        <div id="paymentErrorMessage" style="display: none; color: var(--danger); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; background: var(--danger-light); padding: 0.5rem; border-radius: var(--radius-sm);">
+          <!-- Validation error appears here -->
+        </div>
+
+        <div id="paymentChangeRow" style="display: none; justify-content: space-between; align-items: center; background: var(--success-light); padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px solid #bbf7d0;">
+          <span style="font-weight: 700; color: var(--success);">Customer Change:</span>
+          <span style="font-size: 1.4rem; font-weight: 800; color: var(--success);" id="paymentChangeDisplay">₱0.00</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('paymentModal')">Cancel</button>
+        <button type="button" class="btn btn-success btn-lg" onclick="processCashierOrder()">
+          ✅ Complete & Issue Receipt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Receipt Modal -->
+  <div class="modal-backdrop" id="receiptModal">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3>Customer Receipt</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('receiptModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="receiptContent">
+        <!-- Rendered by pos.js -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('receiptModal')">Close</button>
+        <button type="button" class="btn btn-primary" onclick="printReceipt()">🖨️ Print Receipt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Supabase Setup & Diagnostics Modal -->
+  <div class="modal-backdrop" id="supabaseSetupModal">
+    <div class="modal-content" style="max-width: 660px;">
+      <div class="modal-header">
+        <h3>⚡ Supabase Cloud Database & Connection Manager</h3>
+        <button type="button" class="modal-close-btn" onclick="closeModal('supabaseSetupModal')">&times;</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.9rem;">
+        <!-- Live Diagnostic Status Box -->
+        <div id="supabaseDiagnosticAlert" class="diagnostic-box-warning">
+          Checking Supabase connection...
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+          <a id="supabaseUnpauseBtn" href="https://supabase.com/dashboard/project/ogykjerczbeywowarcwj" target="_blank" class="btn btn-warning btn-sm" style="display: none; text-decoration: none;">
+            🚀 Open Supabase Dashboard (Restore / Unpause Project)
+          </a>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="togglePureInMemoryMode()">
+            💾 Toggle Pure In-Memory Mode
+          </button>
+        </div>
+
+        <!-- Connection Settings Accordion/Form -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.9rem; color: var(--secondary); margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px;">
+            ⚙️ Supabase Credentials & Settings
+          </h4>
+          <div class="form-group" style="margin-bottom: 0.6rem;">
+            <label class="form-label" for="cfgSupabaseUrl" style="font-size: 0.8rem;">Supabase Project URL</label>
+            <input type="text" id="cfgSupabaseUrl" class="form-control" style="font-size: 0.85rem;" placeholder="https://xyzcompany.supabase.co">
+          </div>
+          <div class="form-group" style="margin-bottom: 0.6rem;">
+            <label class="form-label" for="cfgSupabaseKey" style="font-size: 0.8rem;">Supabase Anon Public API Key</label>
+            <input type="password" id="cfgSupabaseKey" class="form-control" style="font-size: 0.85rem;" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <input type="checkbox" id="cfgInMemoryOnly" style="width: 16px; height: 16px; cursor: pointer;">
+            <label for="cfgInMemoryOnly" style="font-size: 0.85rem; color: #475569; cursor: pointer;">
+              Use Pure In-Memory Mode (Disable Cloud Sync / Zero Error Warnings)
+            </label>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveSupabaseConnectionSettings()">
+              💾 Save & Reconnect
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="resetSupabaseSettingsToDefault()">
+              🔄 Reset to Default
+            </button>
+          </div>
+        </div>
+
+        <!-- SQL Schema Reference -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase;">SQL Schema Script (Run in Supabase SQL Editor)</span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="copySupabaseSQL()">📋 Copy SQL Script</button>
+          </div>
+
+          <pre id="supabaseSqlCodeBlock" style="background: #0f172a; color: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); font-size: 0.75rem; max-height: 180px; overflow-y: auto; font-family: 'Courier New', Courier, monospace;">-- 1. Create Menu Items Table
+create table if not exists public.menu_items (
+    id text primary key,
+    name text not null,
+    category text not null,
+    price numeric not null,
+    available boolean default true,
+    description text,
+    created_at timestamptz default now()
+);
+
+-- 2. Create Orders Table
+create table if not exists public.orders (
+    id text primary key,
+    customer_name text not null,
+    items jsonb not null,
+    subtotal numeric not null,
+    total numeric not null,
+    payment numeric default 0,
+    change numeric default 0,
+    status text not null default 'Pending',
+    timestamp text not null,
+    order_type text default 'Dine-In',
+    processed_by text,
+    created_at timestamptz default now()
+);
+
+-- 3. Enable RLS and Open Public Access for School Demo
+alter table public.menu_items enable row level security;
+alter table public.orders enable row level security;
+
+create policy "Public menu_items access" on public.menu_items for all using (true) with check (true);
+create policy "Public orders access" on public.orders for all using (true) with check (true);
+
+-- 4. Seed Initial Dishes
+insert into public.menu_items (id, name, category, price, available, description)
+values
+    ('M001', 'Chicken Adobo', 'Main Course', 120, true, 'Savory stewed chicken marinated in soy sauce, vinegar, and garlic.'),
+    ('M002', 'Burger', 'Fast Food', 100, true, 'Juicy beef patty served with fresh lettuce, tomatoes, and house sauce.'),
+    ('M003', 'Fries', 'Side Dish', 60, true, 'Golden crispy french fries lightly seasoned with salt.'),
+    ('M004', 'Soft Drink', 'Beverage', 40, true, 'Refreshing ice-cold carbonated soda in can.'),
+    ('M005', 'Pork Sisig w/ Egg', 'Main Course', 150, true, 'Sizzling minced pork seasoned with calamansi, onions, and topped with egg.')
+on conflict (id) do nothing;</pre>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('supabaseSetupModal')">Close</button>
+        <button type="button" class="btn btn-primary" onclick="initSupabase(); closeModal('supabaseSetupModal');">🔄 Re-Check Connection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p><strong>Savory Bites Restaurant Management System</strong> &bull; School Software Development Project</p>
+    <p style="margin-top: 4px; font-size: 0.75rem;">Connected to Supabase Cloud Database with seamless in-memory fallback.</p>
+  </footer>
+
+  <!-- ========================================================================
+       APPLICATION SCRIPTS
+       ======================================================================== -->
+  <!-- Supabase Official JavaScript SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase Integration Client -->
+  <script src="js/supabase.js"></script>
+
+  <!-- Core App Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/pos.js"></script>
+  <script src="js/orders.js"></script>
+  <script src="js/sales.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
